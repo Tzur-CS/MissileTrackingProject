@@ -1,0 +1,10 @@
+# Ignore all files
+*
+
+# Allow specific file types to be uploaded
+!*.md
+!*/
+!*.cs
+!.gitignore
+
+
