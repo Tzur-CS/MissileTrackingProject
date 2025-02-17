@@ -3,9 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MissileTracking.Models
 {
-    /// <summary>
-    /// Represents the information of an incoming missile.
-    /// </summary>
     public class MissileInfo
     {
         [Key]
