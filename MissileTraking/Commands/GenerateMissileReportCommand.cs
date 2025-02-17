@@ -3,6 +3,7 @@ using iTextSharp.text;
 using iTextSharp.text.pdf;
 using MissileTracking.Database;
 using MissileTracking.Models;
+using MissileTracking.Services;
 
 namespace MissileTracking.Commands
 {
@@ -14,46 +15,40 @@ namespace MissileTracking.Commands
             {
                 Console.WriteLine("Generating missile report...");
 
-                using (var context = dbContextProvider())
+                await using (var context = dbContextProvider())
                 {
                     var missiles = context.Missiles.ToList();
 
                     // Ensure a valid file path
-                    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "MissileReport.pdf");
+                    var filePath = Path.Combine(AppContext.BaseDirectory, "MissileReport.pdf");
 
                     // Delete existing file to avoid write errors
                     if (File.Exists(filePath))
                     {
                         File.Delete(filePath);
                     }
-                    Console.WriteLine(Directory.GetCurrentDirectory());
+                    Console.WriteLine($"Saving PDF to: {filePath}");
 
-                    string backgroundPath =
-                        Path.Combine("C:/Users/tzur4/Documents/C#_learning/ProjectMT/MissileTracking",
-                            "irondome2.jpg"); // Change to your image
-
-                    using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                    using (Document doc = new Document(PageSize.A4))
+                    var projectRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName;
+                    var backgroundPath = Path.Combine(projectRoot, "Assets", "irondome2.jpg");
+                    
+                    using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (var doc = new Document(PageSize.A4))
                     {
-                        PdfWriter writer = PdfWriter.GetInstance(doc, fs);
+                        var writer = PdfWriter.GetInstance(doc, fs);
                         doc.Open();
                         Console.WriteLine("PDF document created.");
 
                         // Set full-page background image
                         if (File.Exists(backgroundPath))
-                        {
-                            Image bgImage = Image.GetInstance(backgroundPath);
-                            bgImage.ScaleToFit(PageSize.A4.Width, PageSize.A4.Height);
-                            bgImage.SetAbsolutePosition(0, 0);
-                        
-                            PdfContentByte canvas = writer.DirectContentUnder;
-                            canvas.AddImage(bgImage);
-                        }
+                            AddBackGroundImage(writer, backgroundPath);
+                        else
+                            Console.WriteLine($"[Warning] Background image not found at: {backgroundPath}");
 
                         // Add title & date
                         CreateTitleRow(doc);
 
-                        // Add header row (larger text for better visibility)
+                        // Add header row
                         PdfPTable table = CreateHeaderRow();
                         foreach (var missile in missiles)
                         {
@@ -61,95 +56,115 @@ namespace MissileTracking.Commands
                         }
                         doc.Add(table);
                         doc.Close();
-                        
                         writer.Close();
-
                         Console.WriteLine("Missile report generated successfully.");
                     }
 
                     // Send confirmation to client
-                    await SendResponseAsync(stream, $"Report generated successfully: {filePath}");
+                    await TcpConnectionService.SendResponseAsync(stream, $"Report generated successfully: {filePath}");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error generating report: {ex.Message}");
-                await SendResponseAsync(stream, $"Error generating report: {ex.Message}");
+                await TcpConnectionService.SendResponseAsync(stream, $"Error generating report: {ex.Message}");
             }
         }
 
-        private async Task SendResponseAsync(NetworkStream stream, string message)
-        {
-            byte[] responseData = System.Text.Encoding.UTF8.GetBytes(message);
-            await stream.WriteAsync(responseData, 0, responseData.Length);
-        }
+        // private async Task SendResponseAsync(NetworkStream stream, string message)
+        // {
+        //     var responseData = System.Text.Encoding.UTF8.GetBytes(message);
+        //     await stream.WriteAsync(responseData, 0, responseData.Length);
+        // }
 
         private void GenerateNewRow(MissileInfo missile, PdfPTable table)
         {
-            Font normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 12, BaseColor.BLACK);
+            var normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 12, BaseColor.BLACK);
 
-            BaseColor rowColor =
-                missile.InterceptSuccess
-                    ? new BaseColor(144, 238, 144)
-                    : new BaseColor(255, 102, 102); // Green if success, red if fail
+            var rowColor = missile.InterceptSuccess
+                    ? new BaseColor(144, 238, 144) // Light green for success
+                    : new BaseColor(255, 102, 102); // Red for failure
 
-            PdfPCell idCell = new PdfPCell(new Phrase(missile.Id.ToString(), normalFont));
-            idCell.BackgroundColor = rowColor;
-            idCell.HorizontalAlignment = Element.ALIGN_CENTER;
+            var idCell = new PdfPCell(new Phrase(missile.Id.ToString(), normalFont))
+            {
+                BackgroundColor = rowColor,
+                HorizontalAlignment = Element.ALIGN_CENTER
+            };
             table.AddCell(idCell);
 
-            PdfPCell cityCell = new PdfPCell(new Phrase(missile.HitLocation, normalFont));
-            cityCell.BackgroundColor = rowColor;
-            cityCell.HorizontalAlignment = Element.ALIGN_CENTER;
+            var cityCell = new PdfPCell(new Phrase(missile.HitLocation, normalFont))
+            {
+                BackgroundColor = rowColor,
+                HorizontalAlignment = Element.ALIGN_CENTER
+            };
             table.AddCell(cityCell);
 
-            PdfPCell statusCell = new PdfPCell(new Phrase(missile.InterceptSuccess ? "Success" : "Failed", normalFont));
-            statusCell.BackgroundColor = rowColor;
-            statusCell.HorizontalAlignment = Element.ALIGN_CENTER;
+            var statusCell = new PdfPCell(new Phrase(missile.InterceptSuccess ? "Success" : "Failed", normalFont))
+            {
+                BackgroundColor = rowColor,
+                HorizontalAlignment = Element.ALIGN_CENTER
+            };
             table.AddCell(statusCell);
         }
 
         private PdfPTable CreateHeaderRow()
         {
-            
-            // Create table
-            PdfPTable table = new PdfPTable(3); // 3 columns: ID, City, Status
-            table.WidthPercentage = 100;
+            var table = new PdfPTable(3) { WidthPercentage = 100 };
             table.SetWidths(new float[] { 1, 3, 2 });
-            
-            Font tableHeaderFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.WHITE);
-            PdfPCell cell = new PdfPCell(new Phrase("Missile ID", tableHeaderFont));
-            cell.BackgroundColor = BaseColor.DARK_GRAY;
-            cell.HorizontalAlignment = Element.ALIGN_CENTER;
+
+            var tableHeaderFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.WHITE);
+
+            var cell = new PdfPCell(new Phrase("Missile ID", tableHeaderFont))
+            {
+                BackgroundColor = BaseColor.DARK_GRAY,
+                HorizontalAlignment = Element.ALIGN_CENTER
+            };
             table.AddCell(cell);
 
-            cell = new PdfPCell(new Phrase("City", tableHeaderFont));
-            cell.BackgroundColor = BaseColor.DARK_GRAY;
-            cell.HorizontalAlignment = Element.ALIGN_CENTER;
+            cell = new PdfPCell(new Phrase("City", tableHeaderFont))
+            {
+                BackgroundColor = BaseColor.DARK_GRAY,
+                HorizontalAlignment = Element.ALIGN_CENTER
+            };
             table.AddCell(cell);
 
-            cell = new PdfPCell(new Phrase("Interception Status", tableHeaderFont));
-            cell.BackgroundColor = BaseColor.DARK_GRAY;
-            cell.HorizontalAlignment = Element.ALIGN_CENTER;
+            cell = new PdfPCell(new Phrase("Interception Status", tableHeaderFont))
+            {
+                BackgroundColor = BaseColor.DARK_GRAY,
+                HorizontalAlignment = Element.ALIGN_CENTER
+            };
             table.AddCell(cell);
-            
+
             return table;
         }
 
         private void CreateTitleRow(Document doc)
         {
-            Font titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 24, BaseColor.BLACK);
-            Paragraph title = new Paragraph("Missile Interception Report", titleFont);
-            title.Alignment = Element.ALIGN_CENTER;
-            title.SpacingAfter = 20f;
+            var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 24, BaseColor.BLACK);
+            var title = new Paragraph("Missile Interception Report", titleFont)
+            {
+                Alignment = Element.ALIGN_CENTER,
+                SpacingAfter = 20f
+            };
             doc.Add(title);
 
-            // Add generated date (larger size)
-            Font dateFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, BaseColor.BLACK);
-            Paragraph date = new Paragraph($"Generated on: {DateTime.Now}", dateFont);
-            date.Alignment = Element.ALIGN_CENTER;
-            date.SpacingAfter = 10f;
+            var dateFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16, BaseColor.BLACK);
+            var date = new Paragraph($"Generated on: {DateTime.Now}", dateFont)
+            {
+                Alignment = Element.ALIGN_CENTER,
+                SpacingAfter = 10f
+            };
             doc.Add(date);
+        }
+
+        private void AddBackGroundImage(PdfWriter writer,string backgroundPath)
+        {
+            var bgImage = Image.GetInstance(backgroundPath);
+            bgImage.ScaleToFit(PageSize.A4.Width, PageSize.A4.Height);
+            bgImage.SetAbsolutePosition(0, 0);
+
+            var canvas = writer.DirectContentUnder;
+            canvas.AddImage(bgImage);
         }
     }
 }

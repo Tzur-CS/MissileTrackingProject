@@ -5,9 +5,8 @@ namespace MissileTracking.Commands
     public class CommandFactory
     {
         private readonly Dictionary<string, Func<ICommand>> _commands;
-
         
-        public CommandFactory(MissileInterceptor missileInterceptor)
+        public CommandFactory(MissileInterceptorLogic missileInterceptor)
         {
             _commands = new Dictionary<string, Func<ICommand>>
             {
@@ -18,9 +17,9 @@ namespace MissileTracking.Commands
             };
         }
 
-        public ICommand GetCommand(string commandType)
+        public ICommand? GetCommand(string commandType)
         {
-            return _commands.ContainsKey(commandType) ? _commands[commandType]() : null;
+            return _commands.TryGetValue(commandType, out var value) ? value() : null;
         }
     }
 }
