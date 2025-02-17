@@ -19,12 +19,12 @@ namespace MissileTracking.Commands
         public async Task ExecuteAsync(string request, NetworkStream stream, Func<MissileDbContext> dbContextProvider)
         {
             var parts = request.Split(',');
-            if (parts.Length != 3)
+            if (parts.Length != 4 || !int.TryParse(parts[1], out _) || !int.TryParse(parts[2], out _))
             {
                 await TcpConnectionService.SendResponseAsync(stream, "Invalid missile data format");
                 return;
             }
-
+            
             var missile = new MissileInfo
             {
                 Type = parts[0],
