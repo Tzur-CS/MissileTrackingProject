@@ -3,9 +3,6 @@ using MissileTracking.Models;
 
 namespace MissileTracking.Database
 {
-    /// <summary>
-    /// EF Core DbContext that represents the real database.
-    /// </summary>
     public class MissileDbContext : DbContext
     {
         public MissileDbContext(DbContextOptions<MissileDbContext> options) : base(options)

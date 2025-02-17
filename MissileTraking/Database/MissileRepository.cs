@@ -1,4 +1,5 @@
-﻿using MissileTracking.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using MissileTracking.Models;
 
 namespace MissileTracking.Database
 {
@@ -13,11 +14,11 @@ namespace MissileTracking.Database
         /// <summary>
         /// Event raised when a new missile record is added.
         /// </summary>
-        public event EventHandler<MissileEventArgs> MissileAdded;
+        public event EventHandler<MissileEventArgs>? MissileAdded;
 
         public MissileRepository(MissileDbContext context)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         /// <summary>
@@ -25,26 +26,54 @@ namespace MissileTracking.Database
         /// </summary>
         public async Task AddMissileAsync(MissileInfo missile)
         {
+            if (missile == null)
+            {
+                throw new ArgumentNullException(nameof(missile), "Missile cannot be null.");
+            }
+            
             await _context.Missiles.AddAsync(missile);
             await _context.SaveChangesAsync();
-            OnMissileAdded(missile);
-        }
-
-        /// <summary>
-        /// Raises the MissileAdded event.
-        /// </summary>
-        protected virtual void OnMissileAdded(MissileInfo missile)
-        {
             MissileAdded?.Invoke(this, new MissileEventArgs { Missile = missile });
         }
+        
 
         /// <summary>
         /// Returns all missile info records that have a specific hit location.
         /// Uses LINQ to query the database.
         /// </summary>
-        public IEnumerable<MissileInfo> GetMissilesByHitLocation(string location)
+        public async Task<List<MissileInfo>> GetMissilesByHitLocationAsync(string location)
         {
-            return _context.Missiles.Where(m => m.HitLocation == location).ToList();
+            if (string.IsNullOrWhiteSpace(location))
+            {
+                throw new ArgumentException("Location cannot be null or empty.", nameof(location));
+            }
+        
+            try
+            {
+                return await _context.Missiles
+                    .Where(m => m.HitLocation == location)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to retrieve missiles for location {location}: {ex.Message}");
+                return new List<MissileInfo>(); // Return an empty list to avoid null reference issues
+            }
         }
+        
+        
+        public async Task<MissileInfo?> GetMissileByIdAsync(int missileId)
+        {
+            try
+            {
+                return await _context.Missiles.FirstOrDefaultAsync(m => m.Id == missileId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to retrieve missile with ID {missileId}: {ex.Message}");
+                return null;
+            }
+        }
+
     }
 }
