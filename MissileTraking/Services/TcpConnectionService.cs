@@ -6,24 +6,23 @@ namespace MissileTracking.Services
 {
     public class TcpConnectionService
     {
-        private readonly int _port;
+        private const int Port = 5000;
         private readonly MissileTrackingService _trackingService;
 
-        public TcpConnectionService(int port, MissileTrackingService trackingService)
+        public TcpConnectionService(MissileTrackingService trackingService)
         {
-            _port = port;
             _trackingService = trackingService;
         }
 
         public async Task StartAsync()
         {
-            TcpListener listener = new TcpListener(IPAddress.Any, _port);
+            var listener = new TcpListener(IPAddress.Any, Port);
             listener.Start();
-            Console.WriteLine($"[Server] Listening on port {_port}...");
+            Console.WriteLine($"[Server] Listening on port {Port}...");
 
             while (true)
             {
-                TcpClient client = await listener.AcceptTcpClientAsync();
+                var client = await listener.AcceptTcpClientAsync();
                 _ = HandleClientAsync(client);
             }
         }
@@ -32,7 +31,7 @@ namespace MissileTracking.Services
         {
             using (client)
             {
-                NetworkStream stream = client.GetStream();
+                var stream = client.GetStream();
                 try
                 {
                     await _trackingService.ProcessCommandAsync(stream);
@@ -44,17 +43,10 @@ namespace MissileTracking.Services
                 }
             }
         }
-
-        private async Task<string> ReadDataAsync(NetworkStream stream)
+        
+        public static async Task SendResponseAsync(NetworkStream stream, string message)
         {
-            byte[] buffer = new byte[1024];
-            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-            return Encoding.UTF8.GetString(buffer, 0, bytesRead);
-        }
-
-        private async Task SendResponseAsync(NetworkStream stream, string message)
-        {
-            byte[] responseData = Encoding.UTF8.GetBytes(message);
+            var responseData = Encoding.UTF8.GetBytes(message);
             await stream.WriteAsync(responseData, 0, responseData.Length);
         }
     }
