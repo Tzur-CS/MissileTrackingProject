@@ -59,19 +59,6 @@ GenerateReport@
 - The server compiles **all missile data** into a **MissileReport.pdf**.
 - Reports include **interception success/failure rates**, grouped by city.
 
----
-
-## **🔄 Using `Task` for I/O Operations and Events**
-
-### **Why Use `Task`?**
-Since the system must handle **multiple concurrent requests**, we use **`Task` and `async/await`** to:
-
-✅ **Prevent blocking operations** (e.g., database queries, TCP reads/writes).  
-✅ **Allow multiple clients to connect simultaneously**.  
-✅ **Ensure non-blocking missile interception logic**.
-
----
-
 ## **📦 Getting Started**
 
 ### **Prerequisites**
