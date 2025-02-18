@@ -87,7 +87,7 @@ namespace MissileTracking.Database
         
         protected virtual void OnMissileAdded(MissileInfo missile)
         {
-            var handler = MissileAdded; // Local copy for thread safety
+            var handler = MissileAdded; 
             handler?.Invoke(this, new MissileEventArgs { Missile = missile });
         }
     }
