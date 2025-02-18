@@ -22,24 +22,35 @@ namespace MissileTracking.Database
         }
 
         /// <summary>
-        /// Adds missile info to the real database and raises the MissileAdded event.
+        /// Adds missile info to the database and raises the MissileAdded event.
         /// </summary>
-        public async Task AddMissileAsync(MissileInfo missile)
+        public async Task<bool> AddMissileAsync(MissileInfo missile)
         {
             if (missile == null)
             {
                 throw new ArgumentNullException(nameof(missile), "Missile cannot be null.");
             }
-            
-            await _context.Missiles.AddAsync(missile);
-            await _context.SaveChangesAsync();
-            MissileAdded?.Invoke(this, new MissileEventArgs { Missile = missile });
+
+            try
+            {
+                await _context.Missiles.AddAsync(missile);
+                await _context.SaveChangesAsync();
+                
+                // Safely raise the event
+                OnMissileAdded(missile);
+
+                return true; // Indicate success
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to add missile: {ex.Message}");
+                return false; // Indicate failure
+            }
         }
-        
 
         /// <summary>
         /// Returns all missile info records that have a specific hit location.
-        /// Uses LINQ to query the database.
+        /// Uses LINQ to query the database asynchronously.
         /// </summary>
         public async Task<List<MissileInfo>> GetMissilesByHitLocationAsync(string location)
         {
@@ -47,7 +58,7 @@ namespace MissileTracking.Database
             {
                 throw new ArgumentException("Location cannot be null or empty.", nameof(location));
             }
-        
+
             try
             {
                 return await _context.Missiles
@@ -61,7 +72,6 @@ namespace MissileTracking.Database
             }
         }
         
-        
         public async Task<MissileInfo?> GetMissileByIdAsync(int missileId)
         {
             try
@@ -74,6 +84,13 @@ namespace MissileTracking.Database
                 return null;
             }
         }
-
+        
+        protected virtual void OnMissileAdded(MissileInfo missile)
+        {
+            var handler = MissileAdded; // Local copy for thread safety
+            handler?.Invoke(this, new MissileEventArgs { Missile = missile });
+        }
     }
 }
+
+
