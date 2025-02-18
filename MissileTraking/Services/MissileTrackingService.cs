@@ -1,8 +1,8 @@
 ﻿using System.Net.Sockets;
+using System.Text;
 using MissileTracking.Commands;
 using MissileTracking.Database;
 using MissileTracking.Interception;
-using System.Text;
 using MissileTracking.Parsers;
 
 namespace MissileTracking.Services
@@ -16,14 +16,14 @@ namespace MissileTracking.Services
         {
             _createDbContext = createDbContext;
             var missileInterceptor = new MissileInterceptorLogic(_createDbContext, policy);
-            _commandFactory = new CommandFactory(missileInterceptor);
+            _commandFactory = new CommandFactory(missileInterceptor, policy); 
         }
-
+        
         public async Task ProcessCommandAsync(NetworkStream stream)
         {
             var buffer = new byte[1024];
             var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-            var  receivedData =  Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            var receivedData = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
             var commandMap = Parser.Parse(receivedData);
             
             var commandType = commandMap["CommandType"];
@@ -32,7 +32,7 @@ namespace MissileTracking.Services
             
             await ExecuteCommandAsync(commandType, requestData, stream);
         }
-
+        
         private async Task ExecuteCommandAsync(string commandType, string? requestData, NetworkStream stream)
         {
             var command = _commandFactory.GetCommand(commandType);
@@ -42,14 +42,11 @@ namespace MissileTracking.Services
             }
             else
             {
-                await SendResponseAsync(stream, "Unknown command");
+                await TcpConnectionService.SendResponseAsync(stream, "❌ Unknown command.");
             }
-        }
-
-        private static async Task SendResponseAsync(NetworkStream stream, string message)
-        {
-            var responseData = Encoding.UTF8.GetBytes(message);
-            await stream.WriteAsync(responseData, 0, responseData.Length);
         }
     }
 }
+
+
+
