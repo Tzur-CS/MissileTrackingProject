@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text;
+using Microsoft.EntityFrameworkCore;
 using MissileTracking.Database;
 using MissileTracking.Services;
 
@@ -8,9 +9,10 @@ namespace MissileTracking
     {
         public static async Task Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.UTF8;
             var options = DbSetUp();
 
-            Func<MissileDbContext> dbContextProvider = () => new MissileDbContext(options);
+            var dbContextProvider = () => new MissileDbContext(options);
             var trackingService = new MissileTrackingService(dbContextProvider, ["CityA", "CityB"]);
 
             var server = new TcpConnectionService(trackingService);
