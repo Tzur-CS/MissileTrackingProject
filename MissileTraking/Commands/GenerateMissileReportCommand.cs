@@ -71,12 +71,6 @@ namespace MissileTracking.Commands
             }
         }
 
-        // private async Task SendResponseAsync(NetworkStream stream, string message)
-        // {
-        //     var responseData = System.Text.Encoding.UTF8.GetBytes(message);
-        //     await stream.WriteAsync(responseData, 0, responseData.Length);
-        // }
-
         private void GenerateNewRow(MissileInfo missile, PdfPTable table)
         {
             var normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 12, BaseColor.BLACK);
