@@ -10,6 +10,7 @@ The project consists of two main components:
 2. **Client Server** (Sends commands to the main server and retrieves data)
 ---
 video demo: https://www.loom.com/share/cef7f4aabf5e446eb3ff96f5755cccaa?sid=687836ee-a694-45a4-b027-be624e191b53
+video demo with policy: https://www.loom.com/share/4338568109db453888e36dc44e573c94 
 
 ## **🛠️ Features**
 
