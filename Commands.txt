@@ -17,6 +17,8 @@ MissileInfo@Hypersonic,98,315,CityC
 MissileInfo@Cruise,67,155,CityD
 MissileInfo@Ballistic,102,240,CityE
 GetMissileStats@
-GetMissilesByCity@CityC  
+GetMissilesByCity@CityA
+ChangePolicy@remove@CityA	
+ChangePolicy@add@CityX	
 exit
 GenerateReport@
